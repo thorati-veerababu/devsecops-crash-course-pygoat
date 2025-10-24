@@ -17,44 +17,16 @@ jobs:
     run: bandit -ll -ii -r . -f json -o bandit-report.json
   - name: upload artifcatory
     uses: actions/upload-artifact@v4
-    if: always ()
+    if: always()
     with: 
-     name: bandit
-     path: bandit-report.json
- jobs: 
-     name: CI
-on : [push]
-jobs: 
- sast_scan:
-  name: run banditscan
+      name: bandit
+      path: bandit-report.json
+docker_build:
+  name: build docker image
   runs-on: ubuntu-latest
-  steps: 
-  - name: first12
-    uses: actions/checkout@v2
-  - name: setup-python
-    uses: actions/setup-python@v2
-    with:
-      python-version: 3.8
-  - name: install bandit
-    run: pip install bandit
-  - name: run bandit
-    run: bandit -ll -ii -r . -f json -o bandit-report.json
-  - name: upload artifcatory
-    uses: actions/upload-artifact@v4
-    if: always ()
-    with: 
-     name: bandit
-     path: bandit-report.json
-jobs: 
-  docker_build:
-    name: build docker image
-    runs-on: ubuntu-latest
-    steps:
-      - name: checkout code
-        uses: actions/checkout@v2
-      - name: build docker image
-        uses: docker-practice/actions-setup-docker@v1
+  steps:
+    - name: checkout code
+      uses: actions/checkout@v2
+    - name: build docker image
+      uses: docker-practice/actions-setup-docker@v1
         
-     
-
-  
