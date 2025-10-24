@@ -5,7 +5,7 @@ jobs:
   name: run banditscan
   runs-on: ubuntu-latest
   steps: 
-  - name: first
+  - name: first1
     uses: actions/checkout@v2
 
   
