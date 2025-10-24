@@ -15,6 +15,12 @@ jobs:
     run: pip install bandit
   - name: run bandit
     run: bandit -ll -ii -r . -f json -o bandit-report.json
-
+  - name: upload artifcatory
+    uses: actions/upload-artifacat@v3
+    if: always ()
+    with: 
+     name: bandit
+     path: bandit-report.json
+     
 
   
