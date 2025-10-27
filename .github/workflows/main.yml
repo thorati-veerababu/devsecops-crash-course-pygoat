@@ -39,5 +39,5 @@ jobs:
       - name: Set up Docker
         uses: docker-practice/actions-setup-docker@v1
 
-      - name: Build Docker image
+      - name: Build Docker image`
         run: docker build -t my-app:latest .
