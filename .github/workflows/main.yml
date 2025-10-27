@@ -35,6 +35,15 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+      - name: docker demonset
+        run: |
+          sudo mkdir -p /etc/docker
+          if [ ! -f /etc/docker/daemon.json ]; then
+            echo '{}' | sudo tee /etc/docker/daemon.json
+            echo "Created default /etc/docker/daemon.json"
+          else
+            echo "/etc/docker/daemon.json already exists"
+          fi
 
       - name: Set up Docker
         uses: docker-practice/actions-setup-docker@v1
