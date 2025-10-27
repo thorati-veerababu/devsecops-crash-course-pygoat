@@ -1,31 +1,52 @@
-FROM python:3.11-slim-bookworm
+name: CI
 
-WORKDIR /app
+on: [push]
 
-# Install dependencies needed for common Python builds (psycopg2, Pillow, etc.)
-RUN apt-get update && \
-    apt-get install --no-install-recommends -y \
-        gcc \
-        libpq-dev \
-        libjpeg-dev \
-        zlib1g-dev \
-        dnsutils \
-    && apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+jobs:
+  sast_scan:
+    name: Run Bandit Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 \
-    PATH="/root/.local/bin:$PATH"
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.8'
 
-# Upgrade pip, setuptools, wheel first
-COPY requirements.txt .
-RUN pip install --upgrade --no-cache-dir pip setuptools wheel && \
-    pip install --no-cache-dir -r requirements.txt
+      - name: Install Bandit
+        run: pip install bandit
 
-COPY . .
+      - name: Run Bandit scan
+        run: bandit -ll -ii -r . -f json -o bandit-report.json
 
-EXPOSE 8000
+      - name: Upload Bandit report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: bandit-report
+          path: bandit-report.json
 
-RUN python manage.py migrate
+  docker_build:
+    name: Build Docker Image
+    runs-on: ubuntu-latest
+    #needs: sast_scan  # Optional: ensure scan runs before build
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: docker demonset
+        run: |
+          sudo mkdir -p /etc/docker
+          if [ ! -f /etc/docker/daemon.json ]; then
+            echo '{}' | sudo tee /etc/docker/daemon.json
+            echo "Created default /etc/docker/daemon.json"
+          else
+            echo "/etc/docker/daemon.json already exists"
+          fi
 
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers=4", "pygoat.wsgi"]
+      - name: Set up Docker
+        uses: docker-practice/actions-setup-docker@v1
+
+      - name: Build Docker image`
+        run: docker build -t my-app:latest .
