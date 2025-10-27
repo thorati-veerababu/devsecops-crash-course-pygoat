@@ -8,7 +8,74 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
+        uses: actions/checkoutname: CI
+
+on: [push]
+
+jobs:
+  sast_scan:
+    name: Run Bandit Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.8'
+
+      - name: Install Bandit
+        run: pip install bandit
+
+      - name: Run Bandit scan
+        run: bandit -ll -ii -r . -f json -o bandit-report.json
+        continue-on-error: true   # ✅ don’t fail entire job if Bandit finds issues
+
+      - name: Upload Bandit report
+        if: always()               # ✅ upload even if scan fails
+        uses: actions/upload-artifact@v4
+        with:
+          name: bandit-report
+          path: bandit-report.json
+
+  docker_build:
+    name: Build Docker Image and Scan
+    runs-on: ubuntu-latest
+    needs: sast_scan               # ✅ ensures Bandit scan runs first
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Ensure Docker daemon config
+        run: |
+          sudo mkdir -p /etc/docker
+          if [ ! -f /etc/docker/daemon.json ]; then
+            echo '{}' | sudo tee /etc/docker/daemon.json
+          fi
+
+      - name: Set up Docker
+        uses: docker-practice/actions-setup-docker@v1
+
+      - name: Build Docker image
+        run: docker build -t my-app:latest .
+
+      - name: Run Docker Scout scan
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/docker/scout-cli/main/install.sh -o install-scout.sh
+          sh install-scout.sh
+          echo ${{ secrets.REPO_PWD }} | docker login -u ${{ secrets.REPO_USER }} --password-stdin
+          docker scout quickview
+          docker scout cves my-app:latest --severity CRITICAL,HIGH,MEDIUM --json > scout-report.json
+        continue-on-error: true   # ✅ pipeline continues even if vulnerabilities found
+
+      - name: Upload Scout report
+        if: always()              # ✅ upload even if previous step failed
+        uses: actions/upload-artifact@v4
+        with:
+          name: scout-report
+          path: scout-report.json
+@v4
 
       - name: Set up Python
         uses: actions/setup-python@v5
