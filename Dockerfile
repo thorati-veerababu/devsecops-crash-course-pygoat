@@ -1,35 +1,36 @@
+# Use a small, secure base image
 FROM python:3.11-slim-bookworm
 
-# Set work directory
+# Set working directory
 WORKDIR /app
 
-# 🧩 Install required system dependencies (without version pinning)
-RUN apt-get update && apt-get install --no-install-recommends -y \
-    dnsutils \
-    libpq-dev \
-    libpython3-dev && \
-    apt-get clean && rm -rf /var/lib/apt/lists/*
+# Install system dependencies (for psycopg2 and DNS utilities)
+RUN apt-get update && \
+    apt-get install --no-install-recommends -y \
+        gcc \
+        libpq-dev \
+        dnsutils \
+    && apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
-# Set environment variables
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
+# Environment variables
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PATH="/root/.local/bin:$PATH"
 
-# 🐍 Upgrade pip and install dependencies
+# Upgrade pip and install dependencies efficiently
 COPY requirements.txt .
-RUN python -m pip install --no-cache-dir --upgrade pip && \
+RUN pip install --upgrade --no-cache-dir pip && \
     pip install --no-cache-dir -r requirements.txt
 
-# Copy the rest of the project
+# Copy only necessary files
 COPY . .
 
-# ⚙️ Run Django migrations
-RUN python3 manage.py migrate
-
-# Expose port 8000
+# Expose the application port
 EXPOSE 8000
 
-# Set working directory for app
-WORKDIR /app/pygoat/
+# Apply database migrations
+RUN python manage.py migrate
 
-# 🚀 Start Gunicorn server
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "6", "pygoat.wsgi"]
+# Default command (use gunicorn for production)
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers=4", "pygoat.wsgi"]
